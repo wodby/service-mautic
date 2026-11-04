@@ -1,0 +1,179 @@
+name: mautic
+type: service
+icon: mautic
+title: Mautic
+scalable: true
+guidance: GUIDANCE.md
+
+labels:
+- mautic
+
+# The prebuilt wodby/mautic image: Mautic, Apache and PHP-FPM in one container.
+options:
+- version: '7'
+  tag: 7-r0
+  default: true
+
+endpoints:
+- name: http
+  ports:
+  - name: http
+    number: 80
+    protocol: http
+    main: true
+
+links:
+# Mautic supports MariaDB and MySQL only, and can't connect over TLS.
+- name: db
+  title: Database
+  required: true
+  env:
+  - name: DB_HOST
+    value: '{{link.database.host}}'
+  - name: DB_PORT
+    value: '{{link.database.port}}'
+  - name: DB_NAME
+    value: '{{link.database.db.name}}'
+  - name: DB_USERNAME
+    value: '{{link.database.user.name}}'
+  - name: DB_PASSWORD
+    value: '{{link.database.user.password}}'
+    secret: true
+  selectors:
+  - type: db
+    labels:
+    - mariadb
+  - type: db
+    labels:
+    - mysql
+- name: files
+  title: Files storage
+  required: true
+  selectors:
+  - type: storage
+- name: sendmail
+  title: SMTP server
+  required: false
+  env:
+  - name: MSMTP_HOST
+    value: '{{link.host}}'
+  - name: MSMTP_PORT
+    value: '{{link.port}}'
+  selectors:
+  - type: service
+    labels:
+    - smtpd
+
+# Mautic's settings file, uploads, language packs, imports, logs and PHP
+# sessions. Every replica and both workers read and write the same files, so
+# the volume is shared.
+volumes:
+- name: files
+  title: Files
+  link: files
+  shared: true
+  size: 10
+  path: /mnt/files
+  import:
+    owner: 1000
+    group: 1000
+
+settings:
+# The administrator the first deployment creates. Mautic is installed from
+# these values instead of its web installer.
+- name: admin-username
+  title: Admin username
+  description: Username of the Mautic administrator created on the first deployment.
+  default: admin
+  var: MAUTIC_ADMIN_USERNAME
+- name: admin-password
+  title: Admin password
+  description: Password of the Mautic administrator created on the first deployment, at least 6 characters. Change it in Mautic afterwards; this setting is not used again.
+  required: true
+  secret: true
+  var: MAUTIC_ADMIN_PASSWORD
+- name: admin-email
+  title: Admin email
+  description: Email address of the Mautic administrator created on the first deployment. Mautic sends email from this address until you change it in its settings.
+  required: true
+  var: MAUTIC_ADMIN_EMAIL
+
+env:
+# The sender name of Mautic's email on the first deployment.
+- name: MAUTIC_SITE_NAME
+  value: '{{app.title}}'
+
+derivatives:
+- name: mautic-cron
+  icon: mautic
+  title: Mautic Cron
+  args:
+  - mautic-cron
+  type: service
+  default: true
+  required: false
+- name: mautic-worker
+  icon: mautic
+  title: Mautic Queue Worker
+  args:
+  - mautic-worker
+  type: service
+  default: true
+  required: false
+
+actions:
+# Installs Mautic on the first deployment and migrates its database on later
+# ones, so the web installer is never used.
+- name: update
+  title: Install or upgrade Mautic
+  args:
+  - mautic-update
+  type: post_deploy
+
+deployment:
+  strategy: rolling
+  maxUnavailable: 0
+  maxSurge: 1
+  minReady: 10s
+  progressDeadline: 15m
+  shutdownGracePeriod: 30s
+
+# The chart's probes run the image's check-ready action, which checks Apache
+# and PHP-FPM.
+helm:
+  name: wodby
+  source: oci://registry-1.docker.io/wodby/php-fpm
+  chart: oci://registry-1.docker.io/wodby/php-fpm
+  version: 0.3.3
+  valueMappings:
+    serviceAccountName: serviceAccount.name
+    serviceAccountCreate: serviceAccount.create
+  values:
+  - name: containerPort.name
+    value: http
+  - name: containerPort.number
+    value: 80
+
+workloads:
+- name: main
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: '{{helm.release}}'
+  kind: deployment
+  primary: true
+  helm:
+    labels: podLabels
+    annotations: podAnnotations
+    volumes: extraVolumes
+    sidecars: sidecars
+  containers:
+  - name: php
+    image: wodby/mautic
+    # Gives the container WODBY_PRIMARY_URL, Mautic's site address.
+    routeMetadata: true
+    helm:
+      resources: resources
+      env: envVars
+      mounts: extraVolumeMounts
+
+workspace: false
