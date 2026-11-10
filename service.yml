@@ -11,7 +11,7 @@ labels:
 # The prebuilt wodby/mautic image: Mautic, Apache and PHP-FPM in one container.
 options:
 - version: '7'
-  tag: 7-r1
+  tag: 7-r2
   default: true
 
   eol: '2026-09-30T00:00:00+00:00'
