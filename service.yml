@@ -12,6 +12,7 @@ labels:
 options:
 - version: '7'
   tag: 7-r6
+  digest: sha256:3a1c3cad83e46c2fbd0e8f3bb4fad21bcaeea2dda4ae82c4614f6da39e0a7aa7
   default: true
 
   eol: '2026-09-30T00:00:00+00:00'
@@ -84,23 +85,18 @@ settings:
 # these values instead of its web installer.
 - name: admin-username
   title: Admin username
-  description: Username of the Mautic administrator created on the first 
-    deployment.
+  description: Username of the Mautic administrator created on the first deployment.
   default: admin
   var: MAUTIC_ADMIN_USERNAME
 - name: admin-password
   title: Admin password
-  description: Password of the Mautic administrator created on the first 
-    deployment, at least 6 characters. Change it in Mautic afterwards; this 
-    setting is not used again.
+  description: Password of the Mautic administrator created on the first deployment, at least 6 characters. Change it in Mautic afterwards; this setting is not used again.
   required: true
   secret: true
   var: MAUTIC_ADMIN_PASSWORD
 - name: admin-email
   title: Admin email
-  description: Email address of the Mautic administrator created on the first 
-    deployment. Mautic sends email from this address until you change it in its 
-    settings.
+  description: Email address of the Mautic administrator created on the first deployment. Mautic sends email from this address until you change it in its settings.
   required: true
   var: MAUTIC_ADMIN_EMAIL
 
