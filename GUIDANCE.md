@@ -32,8 +32,9 @@ Mautic: back up the volume with the database.
 
 ## Installation and upgrades
 
-Mautic's web installer is not used, and the container doesn't serve it. After every deployment the **Install or
-upgrade Mautic** action runs `mautic-update`:
+Mautic's web installer is not used, and the container doesn't serve it. On every deployment the **Install or
+upgrade Mautic** action runs `mautic-update` in a job of the new version, before its pods are replaced (on the first
+deployment, right after the install):
 
 - **First deployment:** it installs Mautic into the empty database. The administrator comes from the service's settings:
   `admin-username` (default `admin`, `MAUTIC_ADMIN_USERNAME`), `admin-password` (required, secret, at least 6
@@ -44,7 +45,9 @@ upgrade Mautic** action runs `mautic-update`:
 - Without an admin password or email, the action fails and installs nothing.
 - The installer never runs over existing tables: if the database has tables but Mautic is not installed, for example
   after the settings file was lost, the action fails instead.
-- **Later deployments:** it runs `bin/console doctrine:migrations:migrate` and `bin/console mautic:plugins:reload`.
+- **Later deployments:** it runs `bin/console doctrine:migrations:migrate` and `bin/console mautic:plugins:reload`. The
+  previous version keeps serving on the migrated database until the new one is ready. If the action fails, the
+  deployment stops before the rollout.
 - Changing the admin settings after the first deployment does not change the account; change it in Mautic.
 
 ## Workers
@@ -73,5 +76,5 @@ you change it.
 
 - **Settings > System info** shows Mautic's own checks, its folders and its logs.
 - `php bin/console doctrine:migrations:status` shows whether the database is up to date.
-- The deployment's post-deploy log shows the install or upgrade output.
+- The deployment's log shows the install or upgrade output.
 - The `mautic-cron` and `mautic-worker` logs show each job and queue run.

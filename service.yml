@@ -125,12 +125,13 @@ derivatives:
 
 actions:
 # Installs Mautic on the first deployment and migrates its database on later
-# ones, so the web installer is never used.
+# ones, so the web installer is never used. Migrations run before the new
+# version rolls out, while the previous version keeps serving.
 - name: update
   title: Install or upgrade Mautic
   args:
   - mautic-update
-  type: post_deploy
+  type: pre_deploy
 
 deployment:
   strategy: rolling
